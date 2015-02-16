@@ -1,8 +1,0 @@
-# Xcode project file
-*.xcodeproj
-# SwiftOpenGL folder
-*.lproj
-*.appiconset
-*.plist
-#Tests folder
-SwiftOpenGLTests/
