@@ -6,6 +6,8 @@
 //  Copyright (c) 2015 MyKo. All rights reserved.
 //
 
+//  I am assumming the use of OpenGL 3.1 or greater
+//  If you are using a function from OpenGL 2.1 or lower, import OpenGL.GL
 
 import Cocoa
 import OpenGL.GL3
