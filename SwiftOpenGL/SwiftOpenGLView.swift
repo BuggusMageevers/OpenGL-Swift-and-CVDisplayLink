@@ -50,22 +50,16 @@ import QuartzCore.CVDisplayLink
             NSOpenGLPixelFormatAttribute(NSOpenGLProfileVersion3_2Core),
             0
         ]
-        guard let pixelFormat = NSOpenGLPixelFormat(attributes: attributes) else {
-            print("Pixel format could not be created.")
-            return nil
-        }
+        let pixelFormat = NSOpenGLPixelFormat(attributes: attributes)
         self.pixelFormat = pixelFormat
         
-        guard let context = NSOpenGLContext(format: pixelFormat, shareContext: nil) {
-            print("Context could not be created.")
-            return nil
-        }
+        let context = NSOpenGLContext(format: pixelFormat, shareContext: nil)
         self.openGLContext = context
         
         //  Set the swaping interval parameter on the context, setValues:forParameter: is expecting multiple values--use an array
         //  In Swift, context parameters are accessed though the NSOpenGLContextParameter enum, use dot syntax to access the swap interval
         
-        self.openGLContext!.setValues([1], forParameter: .swapInterval)
+        self.openGLContext.setValues([1], forParameter: .GLSwapInterval)
         
         //  CVDLCallbackFunctionPointer() is a C function declared in CVDisplayLinkCallbackFunction.h
         //  It returns a pointer to our callback:  CVDisplayLinkOutputCallback
