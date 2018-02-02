@@ -28,20 +28,20 @@ final class SwiftOpenGLView: NSOpenGLView {
         super.init(coder: coder)
         
         let attrs: [NSOpenGLPixelFormatAttribute] = [
-            UInt32(NSOpenGLPFAAccelerated),
-            UInt32(NSOpenGLPFADoubleBuffer),
-            UInt32(NSOpenGLPFAColorSize), UInt32(32),
-            UInt32(NSOpenGLPFAOpenGLProfile), UInt32(NSOpenGLProfileVersion3_2Core),
-            UInt32(0)
+            NSOpenGLPixelFormatAttribute(NSOpenGLPFAAccelerated),
+            NSOpenGLPixelFormatAttribute(NSOpenGLPFADoubleBuffer),
+            NSOpenGLPixelFormatAttribute(NSOpenGLPFAColorSize), 32,
+            NSOpenGLPixelFormatAttribute(NSOpenGLPFAOpenGLProfile), NSOpenGLPixelFormatAttribute(NSOpenGLProfileVersion3_2Core),
+            0
         ]
         guard let pixelFormat = NSOpenGLPixelFormat(attributes: attrs) else {
-            Swift.print("pixelFormat could not be constructed")
-            return
+            print("Pixel format could not be constructed.")
+            return nil
         }
         self.pixelFormat = pixelFormat
         guard let context = NSOpenGLContext(format: pixelFormat, share: nil) else {
-            Swift.print("context could not be constructed")
-            return
+            print("Context could not be constructed.")
+            return nil
         }
         self.openGLContext = context
         
@@ -165,10 +165,10 @@ final class SwiftOpenGLView: NSOpenGLView {
             let view = unsafeBitCast(displayLinkContext, to: SwiftOpenGLView.self)
             //  Capture the current time in the currentTime property.
             view.currentTime = inNow.pointee.videoTime / Int64(inNow.pointee.videoTimeScale)
-            view.drawView()
+            let result = view.drawView()
             
             //  We are going to assume that everything went well, and success as the CVReturn
-            return kCVReturnSuccess
+            return result
         }
         
         /*  Grab the a link to the active displays, set the callback defined above, and start
@@ -185,12 +185,10 @@ final class SwiftOpenGLView: NSOpenGLView {
         CVDisplayLinkStart(displayLink!)
         
         //  Test render
-        
+        _ = drawView()
     }
     
     override func draw(_ dirtyRect: NSRect) {
-        super.draw(dirtyRect)
-        
         // Drawing code here.
         // This call is not entirely necessary as the view is already
         // set to draw with every screen refresh.  Were we to have
@@ -198,21 +196,19 @@ final class SwiftOpenGLView: NSOpenGLView {
         // draw(_:) would actually be called and this our drawView()
         // within it.  As it is now, it's not based on our implementation.
         drawView()
-        
     }
     
-    fileprivate func drawView() {
-        
+    fileprivate func drawView() -> CVReturn {
         //  Grab a context, make it the active context for drawing, and then lock the focus
         //  before making OpenGL calls that change state or data within objects.
         guard let context = self.openGLContext else {
             //  Just a filler error
             Swift.print("oops")
-            return
+            return kCVReturnError
         }
         
         context.makeCurrentContext()
-        CGLLockContext(context.cglContextObj!)
+        context.lock()
         
         value = sin(currentTime)
         glClearColor(value, value, value, 1.0)
@@ -220,8 +216,10 @@ final class SwiftOpenGLView: NSOpenGLView {
         glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
         
         //  glFlush() is replaced with CGLFlushDrawable() and swaps the buffer being displayed
-        CGLFlushDrawable(context.cglContextObj!)
-        CGLUnlockContext(context.cglContextObj!)
+        context.flushBuffer()
+        context.unlock()
+        
+        return kCVReturnSuccess
     }
     
     deinit {
