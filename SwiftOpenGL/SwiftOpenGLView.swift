@@ -15,7 +15,6 @@ import QuartzCore.CVDisplayLink
 
 
 @objc class SwiftOpenGLView: NSOpenGLView {
-    
     var displayLink: CVDisplayLink?
     
     required init?(coder: NSCoder) {
@@ -43,24 +42,30 @@ import QuartzCore.CVDisplayLink
         //  NSOpenGLPixelFormatAttribute is a typealias for UInt32 in Swift, cast each attribute
         //  Set the view's PixelFormat and Context to the custom pixelFormat and context
         
-        let attrs: [NSOpenGLPixelFormatAttribute] = [
-            UInt32(NSOpenGLPFAAccelerated),
-            UInt32(NSOpenGLPFAColorSize), UInt32(32),
-            UInt32(NSOpenGLPFADoubleBuffer),
-            UInt32(NSOpenGLPFAOpenGLProfile),
-            UInt32( NSOpenGLProfileVersion3_2Core),
-            UInt32(0)
+        let attributes: [NSOpenGLPixelFormatAttribute] = [
+            NSOpenGLPixelFormatAttribute(NSOpenGLPFAAccelerated),
+            NSOpenGLPixelFormatAttribute(NSOpenGLPFAColorSize), 32,
+            NSOpenGLPixelFormatAttribute(NSOpenGLPFADoubleBuffer),
+            NSOpenGLPixelFormatAttribute(NSOpenGLPFAOpenGLProfile),
+            NSOpenGLPixelFormatAttribute(NSOpenGLProfileVersion3_2Core),
+            0
         ]
-        let pixelFormat = NSOpenGLPixelFormat(attributes: attrs)
+        guard let pixelFormat = NSOpenGLPixelFormat(attributes: attributes) else {
+            print("Pixel format could not be created.")
+            return nil
+        }
         self.pixelFormat = pixelFormat
-        let context = NSOpenGLContext(format: pixelFormat, shareContext: nil)
+        
+        guard let context = NSOpenGLContext(format: pixelFormat, shareContext: nil) {
+            print("Context could not be created.")
+            return nil
+        }
         self.openGLContext = context
         
         //  Set the swaping interval parameter on the context, setValues:forParameter: is expecting multiple values--use an array
         //  In Swift, context parameters are accessed though the NSOpenGLContextParameter enum, use dot syntax to access the swap interval
         
-        var swapInterval: [GLint] = [1]
-        self.openGLContext.setValues(swapInterval, forParameter: .GLCPSwapInterval)
+        self.openGLContext!.setValues([1], forParameter: .swapInterval)
         
         //  CVDLCallbackFunctionPointer() is a C function declared in CVDisplayLinkCallbackFunction.h
         //  It returns a pointer to our callback:  CVDisplayLinkOutputCallback
@@ -93,52 +98,48 @@ import QuartzCore.CVDisplayLink
         
         //  It's time to draw, request the rendered frame
         
-        drawView()
+        let result = drawView()
         
-        return kCVReturnSuccess.value
+        return result
     }
     
-    override func prepareOpenGL() {
-        
+    override func prepareOpenGL() {        
         //  Setup OpenGL
         
         glClearColor(0.0, 0.0, 0.0, 1.0)
         
         //  Run a test render
         
-        drawView()
-        
+        _ = drawView()
     }
     
     override func drawRect(dirtyRect: NSRect) {
-        super.drawRect(dirtyRect)
-        
-        // Drawing code here.
-        
-        drawView()
-        
+        _ = drawView()
     }
     
-    func drawView() {
-        
+    func drawView() -> CVReturn {
         //  Grab a context from our view and make it current for drawing into
         //  CVDisplayLink uses a separate thread, lock focus or our context for thread safety
         
-        let context = self.openGLContext
+        guard let context = self.openGLContext else {
+            print("Context could not be acquired.")
+            return kCVReturnError
+        }
+        
         context.makeCurrentContext()
-        CGLLockContext(context.CGLContextObj)
+        context.lock()
         
         //  Clear the context, set up the OpenGL shader program(s), call drawing commands
         //  OpenGL targets and such are UInt32's, cast them before sending in the OpenGL function
         
-        glClear(UInt32(GL_COLOR_BUFFER_BIT))
+        glClear(GLbitfield(GL_COLOR_BUFFER_BIT))
         
         //  We're using a double buffer, call CGLFlushDrawable() to swap the buffer
         //  We're done drawing, unlock the context before moving on
         
-        CGLFlushDrawable(context.CGLContextObj)
-        CGLUnlockContext(context.CGLContextObj)
+        context.flushBuffer()
+        context.unlock()
         
+        return kCVReturnSuccess
     }
-    
 }
